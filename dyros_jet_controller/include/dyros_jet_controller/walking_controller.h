@@ -3,6 +3,7 @@
 
 
 #include "dyros_jet_controller/dyros_jet_model.h"
+#include "dyros_jet_controller/quadraticprogram.h"
 #include "math_type_define.h"
 #include <vector>
 #include <fstream>
@@ -10,6 +11,9 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
+#include <tf/LinearMath/Matrix3x3.h>
 
 #define ZERO_LIBRARY_MODE
 
@@ -51,8 +55,8 @@ public:
   static constexpr unsigned int PRIORITY = 8;
 
 
-  WalkingController(DyrosJetModel& model, const VectorQd& current_q, const double hz, const double& control_time) :
-    total_dof_(DyrosJetModel::HW_TOTAL_DOF), model_(model), current_q_(current_q), hz_(hz), current_time_(control_time), start_time_{}, end_time_{}, slowcalc_thread_(&WalkingController::slowCalc, this), calc_update_flag_(false), calc_start_flag_(false), ready_for_thread_flag_(false), ready_for_compute_flag_(false), foot_step_planner_mode_(false), walking_end_foot_side_ (false), foot_plan_walking_last_(false), foot_last_walking_end_(false)
+  WalkingController(DyrosJetModel& model, const VectorQd& current_q, const VectorQd& current_qdot, const double hz, const double& control_time) :
+    total_dof_(DyrosJetModel::HW_TOTAL_DOF), model_(model), current_q_(current_q), current_qdot_(current_qdot), hz_(hz), current_time_(control_time), start_time_{}, end_time_{}, slowcalc_thread_(&WalkingController::slowCalc, this), calc_update_flag_(false), calc_start_flag_(false), ready_for_thread_flag_(false), ready_for_compute_flag_(false), foot_step_planner_mode_(false), walking_end_foot_side_ (false), foot_plan_walking_last_(false), foot_last_walking_end_(false)
   {
     walking_state_send = false;
     walking_end_ = false;
@@ -115,15 +119,13 @@ public:
   void updateInitialState();
 
   //functions for getFootStep()
-  void calculateFootStepTotal();
-  void calculateFootStepSeparate();
-  void usingFootStepPlanner();
-
-  //functions for getZMPTrajectory()
   void floatToSupportFootstep();
   void addZmpOffset();
   void zmpGenerator(const unsigned int norm_size, const unsigned planning_step_num);
   void onestepZmp(unsigned int current_step_number, Eigen::VectorXd& temp_px, Eigen::VectorXd& temp_py);
+  void calculateFootStepSeparate();
+  void calculateFootStepTotal();
+  void usingFootStepPlanner();
 
   //functions in compensator()
   void hipCompensator(); //reference Paper: http://dyros.snu.ac.kr/wp-content/uploads/2017/01/ICHR_2016_JS.pdf
@@ -149,11 +151,17 @@ public:
   void slowCalc();
   void slowCalcContent();
 
-
+  void cpsControl();
 
   void discreteRiccatiEquationInitialize(Eigen::MatrixXd a, Eigen::MatrixXd b);
   Eigen::MatrixXd discreteRiccatiEquationLQR(Eigen::MatrixXd A, Eigen::MatrixXd B, Eigen::MatrixXd R, Eigen::MatrixXd Q);
   Eigen::MatrixXd discreteRiccatiEquationPrev(Eigen::MatrixXd a, Eigen::MatrixXd b, Eigen::MatrixXd r, Eigen::MatrixXd q);
+
+  void linkMass();
+  void linkInertia();
+  Eigen::Matrix3d inertiaTensorTransform(Eigen::Matrix3d local_inertia, double mass, Eigen::Isometry3d transformation);
+  void getComJacobian();
+  void computeComJacobianControl(Eigen::Vector12d &desired_leg_q_dot);
 
   VectorQd desired_q_not_compensated_;
 
@@ -173,6 +181,10 @@ public:
   void getCapturePoint_init_ref();
   void CapturePointModify();
   void zmptoInitFloat();
+<<<<<<< HEAD
+=======
+  void cpsControl();
+>>>>>>> upstream/master
   Eigen::VectorXd capturePoint_refx, capturePoint_refy;
   Eigen::VectorXd zmp_refx, zmp_refy;
   Eigen::VectorXd capturePoint_ox, capturePoint_oy, zmp_dx, zmp_dy;
@@ -180,18 +192,43 @@ public:
   double last_time_;
   int capturePoint_current_num_;
   Eigen::Vector3d com_float_prev_;
+<<<<<<< HEAD
   Eigen::Vector4d com_float_prev;
+=======
+  Eigen::Vector4d com_float_prev_dot_;
+  Eigen::Vector4d com_float_ddot_;
+  Eigen::Vector4d com_float_prev;
+  Eigen::Vector3d com_support_prev;
+  Eigen::Vector4d measured_zmp_;
+  Eigen::Vector4d com_float_ddot_filter_;
+  Eigen::Vector4d com_float_prev1_;
+>>>>>>> upstream/master
   double ux_1, uy_1;
+  double step_tick_;
   Eigen::Vector3d xs, ys;
   int currentstep;
   bool firsttime = false;
   Eigen::Vector2d capturePoint_offset_;
   Eigen::Isometry3d float_support_init;
   Eigen::Isometry3d current_step_float_support_;
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  CQuadraticProgram foot_QP;
+  Eigen::Vector4d zmp_prev;
+=======
+  Eigen::Isometry3d reference_temp;
+>>>>>>> b22719c91c3d101d33a1f8e495aed81daf35be03
+>>>>>>> upstream/master
 
   Eigen::Isometry3d support_float_init;
   Eigen::Isometry3d current_step_support_float_;
 
+<<<<<<< HEAD
+=======
+  Eigen::Vector12d leg_q_;
+
+>>>>>>> upstream/master
   Eigen::Vector6d q_sim_virtual_;
   Eigen::Vector6d q_sim_dot_virtual_;
   Eigen::VectorXd com_refx;
@@ -200,6 +237,53 @@ public:
   Eigen::VectorXd com_dot_refy;
   Eigen::Vector2d com_initx;
   Eigen::Vector2d com_inity;
+<<<<<<< HEAD
+=======
+ //comJacobian variables
+  Eigen::Matrix<double, 6, 1> mass_l_leg_;
+  Eigen::Matrix<double, 6, 1> mass_r_leg_;
+  Eigen::Matrix<double, 7, 1> mass_l_arm_;
+  Eigen::Matrix<double, 7, 1> mass_r_arm_;
+  Eigen::Matrix<double, 3, 1> mass_body_;
+  double mass_total_;
+
+  Eigen::Matrix3d inertia_link_float_[29];
+  Eigen::Matrix3d inertia_total_;
+
+  Eigen::Vector3d c_l_leg_[6];
+  Eigen::Vector3d c_r_leg_[6];
+  Eigen::Vector3d c_l_arm_[7];
+  Eigen::Vector3d c_r_arm_[7];
+  Eigen::Vector3d c_waist_[3];
+
+  Eigen::Matrix6d adjoint_support_;
+  Eigen::Matrix6d adjoint_21_;
+  Eigen::Vector3d disturbance_accel_;
+  Eigen::Vector3d disturbance_accel_old_;
+  Eigen::Vector3d desired_w_;
+  Eigen::Vector3d desired_u_;
+  Eigen::Vector3d desired_u_old_;
+  Eigen::Vector3d desired_u_dot_;
+  Eigen::Vector6d x2_d_dot_;
+
+  Eigen::Matrix<double, 3, 6> j_rleg_com_total_support;
+  Eigen::Matrix<double, 3, 6> j_lleg_com_total_support;
+
+  Eigen::Matrix<double, 3, 7> j_rarm_com_total_support;
+  Eigen::Matrix<double, 3, 7> j_larm_com_total_support;
+
+  Eigen::Matrix6d j1_;
+  Eigen::Matrix6d j2_;
+  Eigen::Matrix<double, 3, 6> j_v1_;
+  Eigen::Matrix<double, 3, 6> j_w1_;
+
+  Eigen::Matrix<double, 3, 6> j_com_psem_;
+  Eigen::Vector3d desired_c_dot_psem_;
+
+  Eigen::Matrix6d j_total_;
+  Eigen::Vector6d c_total_;
+
+>>>>>>> upstream/master
 
 
 private:
@@ -215,6 +299,10 @@ private:
   Eigen::Vector3d imu_acc_;
   Eigen::Vector3d imu_ang_;
   Eigen::Vector3d imu_grav_rpy_;
+
+  Eigen::Vector3d f_ft_support_;
+  Eigen::Vector3d moment_support_desried_;
+  Eigen::Vector3d moment_support_current_;
 
   //parameterSetting()
   double t_last_;
@@ -261,6 +349,7 @@ private:
   int foot_step_start_foot_;
   bool walkingPatternDCM_;
   Eigen::MatrixXd foot_pose_;
+  
 
   Eigen::MatrixXd foot_step_;
   Eigen::MatrixXd foot_step_support_frame_;
@@ -273,6 +362,7 @@ private:
   VectorQd desired_q_;
   VectorQd target_q_;
   const VectorQd& current_q_;
+  const VectorQd& current_qdot_;
 
 
 
@@ -313,6 +403,10 @@ private:
   //Step current state variable//
   Eigen::Vector3d com_support_current_;
   Eigen::Vector3d com_support_dot_current_;//from support foot
+  //capture
+  Eigen::Isometry3d lfoot_float_current_1;
+  Eigen::Isometry3d rfoot_float_current_1;
+  Eigen::Vector3d com_support_current_1;
 
   ///simulation
   Eigen::Vector3d com_sim_current_;
@@ -333,6 +427,7 @@ private:
   Eigen::Isometry3d rfoot_support_current_;
 
   Eigen::Vector3d com_float_current_;
+  Eigen::Vector3d com_float_current_dot_;
   Eigen::Isometry3d pelv_float_current_;
   Eigen::Isometry3d lfoot_float_current_;
   Eigen::Isometry3d rfoot_float_current_;
@@ -416,6 +511,7 @@ private:
   Eigen::Matrix<double, 36, 12> bd_copy_;
 
   Eigen::Matrix<double, 36, 36> ad_right_;
+
   Eigen::Matrix<double, 36, 12> bd_right_;
   Eigen::Matrix<double, 48, 48> ad_total_right_;
   Eigen::Matrix<double, 48, 12> bd_total_right_;

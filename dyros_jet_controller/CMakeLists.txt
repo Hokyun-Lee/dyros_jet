@@ -66,6 +66,10 @@ file(GLOB CONTROLLER_SRC
     "src/joint_controller.cpp"
     "src/moveit_controller.cpp"
     "src/quadraticprogram.cpp"
+<<<<<<< HEAD
+=======
+    "src/com_jacobian.cpp"
+>>>>>>> upstream/master
     )
 
 
@@ -92,7 +96,7 @@ target_link_libraries(dyros_jet_controller
     dyros_jet_controller_lib
     ${catkin_LIBRARIES}
     ${Boost_LIBRARIES}
-    ${CVXGEN_SRC}
+    ${CVXGEN_SRC} 
     )
 
 add_dependencies(dyros_jet_controller_lib ${catkin_EXPORTED_TARGETS})

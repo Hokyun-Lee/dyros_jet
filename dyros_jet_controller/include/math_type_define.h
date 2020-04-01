@@ -109,18 +109,18 @@ static double cubicDot(double time,     ///< Current time
              double x_f,      ///< End state
              double x_dot_0,  ///< Start state dot
              double x_dot_f,   ///< End state dot
-             double hz         ///< control frequency
+             double hz         ///< contl frequency
              )
 {
   double x_t;
 
   if (time < time_0)
   {
-    x_t = x_0;
+    x_t = x_dot_0;
   }
   else if (time > time_f)
   {
-    x_t = x_f;
+    x_t = x_dot_f;
   }
   else
   {
@@ -556,6 +556,49 @@ static void toEulerAngle(double qx, double qy, double qz, double qw, double& rol
   yaw = atan2(siny, cosy);
 
 }
+<<<<<<< HEAD
+=======
+static Eigen::Vector4d rot2Axis(Eigen::Matrix3d Rot)
+{
+  double theta;
+  Eigen::Vector4d result;
+  Eigen::Vector3d omega;
+
+  theta=acos((Rot(0,0)+Rot(1,1)+Rot(2,2)-1)/2);
+  if(theta == 0)
+  {
+    omega.setZero();
+  }
+  else
+  {
+    omega(0) = (Rot(2,1)-Rot(1,2))/(2*sin(theta));
+    omega(1) = (Rot(0,2)-Rot(2,0))/(2*sin(theta));
+    omega(2) = (Rot(1,0)-Rot(0,1))/(2*sin(theta));
+
+  }
+  result.segment<3>(0) = omega;
+  result(3) = theta;
+
+  return result;
+}
+
+static Eigen::Matrix3d axis2Rot(Eigen::Vector4d W)
+{
+  Eigen::Matrix3d Rot;
+  Eigen::Matrix3d I;
+  double theta;
+  Eigen::Vector3d omega;
+  Eigen::Matrix3d skew_w;
+  skew_w = DyrosMath::skew(omega);
+  I.setIdentity();
+
+  theta = W(4);
+  omega = W.segment<3>(0);
+  Rot = I + sin(theta)*(skew_w) + (1-cos(theta))*(skew_w)*(skew_w);
+
+  return Rot;
+}
+>>>>>>> upstream/master
 
 static Eigen::Vector3d QuinticSpline(
                    double time,       ///< Current time
